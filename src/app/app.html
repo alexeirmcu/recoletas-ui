@@ -1,0 +1,15 @@
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" routerLink="/" aria-label="Inicio portal de paciente">
+      <span class="brand-mark" aria-hidden="true">✦</span><span>recoletas <small>portal de paciente</small></span>
+    </a>
+    <nav aria-label="Navegación principal">
+      <a routerLink="/registro" routerLinkActive="active">Registro</a>
+      @if (auth.session()) { <a routerLink="/citas" routerLinkActive="active">Mis citas</a> }
+      <a routerLink="/auth" routerLinkActive="active">Auth</a>
+      @if (auth.session()) { <button mat-stroked-button (click)="logout()">Cerrar sesión</button> }
+    </nav>
+  </div>
+</header>
+<main><router-outlet /></main>
+<footer>Portal de paciente · Entorno de demostración con datos sintéticos</footer>

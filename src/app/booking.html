@@ -1,0 +1,68 @@
+<section class="page dashboard">
+  <div class="page-heading"><div><p class="eyebrow">TU ESPACIO PERSONAL</p><h1>Hola, {{ auth.session()?.name }}</h1>
+    <p class="lead">Consulta la agenda y gestiona tus pruebas desde aquí.</p></div><span class="timezone">◷ &nbsp; Hora de Madrid</span></div>
+  @if (message) { <p class="success" role="status">{{ message }}</p> }
+  @if (actionError) { <p class="error" role="alert">{{ actionError }}</p> }
+  @if (directHold) { <div class="notice"><strong>Reserva temporal pendiente.</strong> No es una cita confirmada.
+    <button mat-flat-button [disabled]="busy" (click)="confirm(directHold.slotId, directHold.generation)">Confirmar reserva</button></div> }
+  <div class="dashboard-grid">
+    <section class="card agenda">
+      <div class="section-title"><div><p class="eyebrow">ENCUENTRA TU MOMENTO</p><h2>Agenda disponible</h2></div><span class="decor">✳</span></div>
+      <p class="muted">Filtra por fecha y tipo de prueba. Horarios en Europe/Madrid.</p>
+      <form class="filters" [formGroup]="filters" (ngSubmit)="loadSlots()">
+        <mat-form-field appearance="outline"><mat-label>Desde</mat-label><input matInput type="datetime-local" formControlName="from"></mat-form-field>
+        <mat-form-field appearance="outline"><mat-label>Hasta</mat-label><input matInput type="datetime-local" formControlName="to"></mat-form-field>
+        <mat-form-field appearance="outline"><mat-label>Prueba</mat-label><mat-select formControlName="type"><mat-option value="">Todas</mat-option>
+          @for (type of types; track type) { <mat-option [value]="type">{{ labels[type] }}</mat-option> }
+        </mat-select></mat-form-field>
+        <button mat-flat-button type="submit" [disabled]="slotLoading">Buscar</button>
+      </form>
+      @if (slotLoading) { <p role="status">Cargando agenda…</p> }
+      @else if (slotError) { <p class="error" role="alert">{{ slotError }}</p> }
+      @else if (!slots.length) { <p class="empty">No hay huecos disponibles para este intervalo.</p> }
+      @else { <div class="items">@for (slot of slots; track slot.slotId) {
+        <article class="item"><div><strong>{{ labels[slot.testType] }}</strong><p>{{ date(slot.startsAtUtc) }} – {{ date(slot.endsAtUtc) }}</p></div>
+          <button mat-stroked-button [disabled]="busy" (click)="hold(slot)">Reservar</button></article>
+      }</div> }
+    </section>
+    <section class="card">
+      <div class="section-title"><div><p class="eyebrow">NO PIERDAS TU TURNO</p><h2>Pendientes</h2></div>
+        <button mat-button (click)="togglePending()" [attr.aria-expanded]="pendingOpen" aria-controls="pending-panel">{{ pendingOpen ? 'Ocultar' : 'Mostrar' }}</button></div>
+      @if (pendingOpen) { <div id="pending-panel">
+        <p class="muted">Reservas temporales y ofertas activas. Se actualizan cada 15 segundos mientras este panel está visible.</p>
+        <button mat-stroked-button (click)="refreshPending()" [disabled]="pendingLoading">Actualizar</button>
+        @if (pendingLoading) { <p role="status">Actualizando pendientes…</p> }
+        @if (pendingError) { <p class="error" role="alert">{{ pendingError }}</p> }
+        @else if (!pendingLoading && !pending.length) { <p class="empty">No tienes acciones pendientes.</p> }
+        @for (item of pending; track item.slotId) {
+          <article class="pending-item"><span class="pill">{{ item.kind === 'hold' ? 'Reserva temporal' : 'Oferta' }}</span>
+            <h3>{{ labels[item.testType] }}</h3><p>{{ date(item.startsAtUtc) }} – {{ date(item.endsAtUtc) }}</p>
+            <p class="muted">Vence: {{ date(item.expiresAtUtc) }} (hora de Madrid)</p>
+            @if (expired(item)) { <p class="error">El plazo indicado ha vencido. Actualiza el panel.</p> }
+            @if (item.kind === 'hold') { <button mat-flat-button [disabled]="busy || expired(item)" (click)="confirmPending(item)">Confirmar</button> }
+            @else { <div class="actions"><button mat-flat-button [disabled]="busy || expired(item)" (click)="accept(item)">Aceptar</button>
+              <button mat-stroked-button [disabled]="busy || expired(item)" (click)="decline(item)">Rechazar</button></div> }
+          </article>
+        }
+      </div> }
+    </section>
+    <section class="card">
+      <div class="section-title"><div><p class="eyebrow">TU AGENDA</p><h2>Citas confirmadas</h2></div><span class="decor lavender">✦</span></div>
+      @if (appointmentLoading) { <p role="status">Cargando citas…</p> }
+      @else if (appointmentError) { <p class="error" role="alert">{{ appointmentError }}</p> }
+      @else if (!appointments.length) { <p class="empty">Aún no tienes citas confirmadas.</p> }
+      @for (item of appointments; track item.reservationId) {
+        <article class="item"><div><strong>{{ labels[item.testType] }}</strong><p>{{ date(item.startsAtUtc) }} – {{ date(item.endsAtUtc) }}</p></div>
+          <button mat-stroked-button [disabled]="busy" (click)="cancel(item)">Cancelar cita</button></article>
+      }
+    </section>
+    <section class="card waitlist">
+      <p class="eyebrow">MÁS OPORTUNIDADES</p><h2>Lista de espera</h2>
+      <p>Si no encuentras un hueco, solicita entrar en la lista de tu prueba. Las ofertas aparecerán en Pendientes.</p>
+      <mat-form-field appearance="outline" class="full"><mat-label>Tipo de prueba</mat-label><mat-select [formControl]="waitType">
+        @for (type of types; track type) { <mat-option [value]="type">{{ labels[type] }}</mat-option> }
+      </mat-select></mat-form-field>
+      <button mat-flat-button [disabled]="busy" (click)="join()">Solicitar lista de espera</button>
+    </section>
+  </div>
+</section>
